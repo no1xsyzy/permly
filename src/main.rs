@@ -1,8 +1,11 @@
-use std::io::prelude::*;
 use std::process::exit;
 
-mod lib;
-use crate::lib::*;
+mod base;
+mod export;
+mod mount;
+use crate::base::*;
+use crate::export::parse_export;
+use crate::mount::parse_mount;
 
 fn main() {
     let mut config = Config {
@@ -68,37 +71,11 @@ fn do_it(behavior: &Behavior, config: &Config) -> Result<(), i32> {
     }
 }
 
-trait Execute {
-    fn exec(self: &Self) -> Result<(), i32>;
-}
-
-impl Execute for Behavior {
-    fn exec(&self) -> Result<(), i32> {
-        match self {
-            Behavior::Run { cmd } => {
-                let exitstatus = std::process::Command::new(&cmd[0])
-                    .args(&cmd[1..])
-                    .status()
-                    .expect("No such runsys");
-                match exitstatus.code() {
-                    Some(0) => Ok(()),
-                    Some(x) => Err(x),
-                    None => Err(130),
-                }
-            }
-            Behavior::AppendLineToFile { filename, line } => {
-                let mut fp = match std::fs::OpenOptions::new().append(true).open(&filename) {
-                    Ok(fp) => fp,
-                    Err(_) => {
-                        return Err(128);
-                    }
-                };
-                match fp.write_all(line.as_bytes()) {
-                    Ok(_) => Ok(()),
-                    Err(_) => Err(129),
-                }
-            }
-            Behavior::NoOperationReason { reason: _ } => Ok(()),
-        }
+fn parse(config: &Config) -> Result<Vec<Behavior>, String> {
+    match config.cmd.as_ref().map(|s| s.as_str()) {
+        Some("mount") => parse_mount(&config),
+        Some("export") => parse_export(&config),
+        Some(cmd) => Err(format!("Command not supported! {}", cmd)),
+        None => Err("No command is specified!".to_string()),
     }
 }
