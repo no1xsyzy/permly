@@ -5,49 +5,45 @@ pub fn parse_mount(config: &Config) -> Result<Vec<Behavior>, String> {
     let mut device: Option<String> = None;
     let mut mountpoint: Option<String> = None;
     let mut fstype: Option<String> = None;
-    let mut last_opt: Option<String> = None;
-    for arg in config.args.iter() {
-        match (arg.starts_with("-"), last_opt.as_ref().map(|s| s.as_str())) {
-            (true, Some(opt)) => {
-                return Err(format!("mount: option requires an argument -- '{}'", opt))
+    let mut iterator = config.args.iter();
+    loop {
+        match iterator.next().map(|s| s.as_str()) {
+            Some("--options") | Some("-o") => {
+                if let Some(arg) = iterator.next() {
+                    options.push(arg.clone());
+                } else {
+                    return Err(format!("mount: option requires an argument -- '--options'"));
+                }
             }
-            (true, None) => {
-                last_opt = Some(arg.clone());
+            Some("--types") | Some("-t") => {
+                if fstype.is_some() {
+                    return Err(format!("mount: multiple --types"));
+                } else if let Some(arg) = iterator.next() {
+                    fstype = Some(arg.clone());
+                } else {
+                    return Err(format!("mount: option requires an argument -- '--types'"));
+                }
             }
-            (false, Some("-o")) | (false, Some("--options")) => {
-                options.push(arg.clone());
-                last_opt = None;
-            }
-            (false, Some("-t")) | (false, Some("--types")) => {
-                fstype = Some(arg.clone());
-                last_opt = None;
-            }
-            (false, Some(opt)) => {
-                println!("Unsupported opts -- '{}'", opt)
-            }
-            (false, None) => {
-                if arg.starts_with("-") {
-                    return Err(format!("Unsupported opts for `mount`: `{}`", arg));
+            Some(opt) => {
+                if opt.starts_with("-") {
+                    return Err(format!("mount: unknown option -- '{}'", opt));
                 } else if device.is_none() {
-                    device = Some(arg.clone());
+                    device = Some(opt.to_string());
                 } else if mountpoint.is_none() {
-                    mountpoint = Some(arg.clone());
+                    mountpoint = Some(opt.to_string());
                 } else {
                     return Err(format!("Too much arguments"));
                 }
             }
+            None => {
+                break;
+            }
         }
     }
-    if last_opt.is_some() {
-        return Err(format!(
-            "mount: option requires an argument -- '{}'",
-            last_opt.unwrap()
-        ));
-    }
 
-    let device = device.expect("No device");
-    let mountpoint = mountpoint.expect("No mountpoint");
-    let fstype = fstype.expect("No fs_type");
+    let device = device.ok_or("No device")?;
+    let mountpoint = mountpoint.ok_or("No mountpoint")?;
+    let fstype = fstype.ok_or("No fs_type")?;
     let options = options.join(",");
 
     if config.now {
