@@ -24,6 +24,14 @@ pub fn parse_mount(config: &Config) -> Result<Vec<Behavior>, String> {
                     return Err(format!("mount: option requires an argument -- '--types'"));
                 }
             }
+            Some("--bind") | Some("-B") => {
+                if fstype.is_some() {
+                    return Err(format!("mount: bad usage"))
+                } else {
+                    fstype = Some("none".to_string());
+                    options.push("bind".to_string());
+                }
+            }
             Some(opt) => {
                 if opt.starts_with("-") {
                     return Err(format!("mount: unknown option -- '{}'", opt));
