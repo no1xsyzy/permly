@@ -32,6 +32,9 @@ pub fn parse_mount(config: &Config) -> Result<Vec<Behavior>, String> {
                     options.push("bind".to_string());
                 }
             }
+            Some("--readonly") | Some("-r") => {
+                options.push("ro".to_string());
+            }
             Some(opt) => {
                 if opt.starts_with("-") {
                     return Err(format!("mount: unknown option -- '{}'", opt));
