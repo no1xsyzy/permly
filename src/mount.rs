@@ -1,4 +1,15 @@
+use std::path::PathBuf;
+
 use crate::base::*;
+
+fn resolve_dir(dir: String) -> Result<String, String> {
+    Ok(PathBuf::from(dir)
+        .canonicalize()
+        .map_err(|_| "no such dir")?
+        .to_str()
+        .ok_or("unable to transform it to string")?
+        .to_string())
+}
 
 pub fn parse_mount(config: &Config) -> Result<Vec<Behavior>, String> {
     let mut options: Vec<String> = vec![];
@@ -26,7 +37,7 @@ pub fn parse_mount(config: &Config) -> Result<Vec<Behavior>, String> {
             }
             Some("--bind") | Some("-B") => {
                 if fstype.is_some() {
-                    return Err(format!("mount: bad usage"))
+                    return Err(format!("mount: bad usage"));
                 } else {
                     fstype = Some("none".to_string());
                     options.push("bind".to_string());
@@ -52,8 +63,8 @@ pub fn parse_mount(config: &Config) -> Result<Vec<Behavior>, String> {
         }
     }
 
-    let device = device.ok_or("No device")?;
-    let mountpoint = mountpoint.ok_or("No mountpoint")?;
+    let device = resolve_dir(device.ok_or("No device")?)?;
+    let mountpoint = resolve_dir(mountpoint.ok_or("No mountpoint")?)?;
     let fstype = fstype.ok_or("No fs_type")?;
     let options = options.join(",");
 
