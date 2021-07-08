@@ -3,9 +3,11 @@ use std::process::exit;
 mod base;
 mod export;
 mod mount;
+mod sysctl;
 use crate::base::*;
 use crate::export::parse_export;
 use crate::mount::parse_mount;
+use crate::sysctl::parse_sysctl;
 
 fn main() {
     let mut config = Config {
@@ -75,6 +77,7 @@ fn parse(config: &Config) -> Result<Vec<Behavior>, String> {
     match config.cmd.as_ref().map(|s| s.as_str()) {
         Some("mount") => parse_mount(&config),
         Some("export") => parse_export(&config),
+        Some("sysctl") => parse_sysctl(&config),
         Some(cmd) => Err(format!("Command not supported! {}", cmd)),
         None => Err("No command is specified!".to_string()),
     }
